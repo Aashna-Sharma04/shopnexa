@@ -1,0 +1,365 @@
+import asyncio
+import sys
+sys.path.append('/app/backend')
+
+from motor.motor_asyncio import AsyncIOMotorClient
+from passlib.context import CryptContext
+import uuid
+from datetime import datetime, timezone
+import os
+from dotenv import load_dotenv
+
+load_dotenv('/app/backend/.env')
+
+mongo_url = os.environ['MONGO_URL']
+db_name = os.environ['DB_NAME']
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+async def seed_database():
+    client = AsyncIOMotorClient(mongo_url)
+    db = client[db_name]
+    
+    # Clear existing data
+    await db.users.delete_many({})
+    await db.products.delete_many({})
+    await db.categories.delete_many({})
+    
+    print("Creating users...")
+    
+    # Create users
+    users = [
+        {
+            "id": str(uuid.uuid4()),
+            "email": "admin@shopnexia.com",
+            "name": "Admin User",
+            "password": pwd_context.hash("admin123"),
+            "role": "admin",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "email": "seller@shopnexia.com",
+            "name": "Seller User",
+            "password": pwd_context.hash("seller123"),
+            "role": "seller",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "email": "customer@shopnexia.com",
+            "name": "Customer User",
+            "password": pwd_context.hash("customer123"),
+            "role": "customer",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    ]
+    
+    await db.users.insert_many(users)
+    seller_id = users[1]["id"]
+    
+    print("Creating categories...")
+    
+    # Create categories
+    categories = [
+        {"id": str(uuid.uuid4()), "name": "Earbuds", "image_url": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df"},
+        {"id": str(uuid.uuid4()), "name": "Mobile Phones", "image_url": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9"},
+        {"id": str(uuid.uuid4()), "name": "Laptops", "image_url": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853"},
+        {"id": str(uuid.uuid4()), "name": "Monitors", "image_url": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf"},
+        {"id": str(uuid.uuid4()), "name": "Smart Watches", "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30"},
+        {"id": str(uuid.uuid4()), "name": "Headphones", "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e"},
+        {"id": str(uuid.uuid4()), "name": "Cameras", "image_url": "https://images.unsplash.com/photo-1510872893374-80379d91fc92"},
+        {"id": str(uuid.uuid4()), "name": "Fashion", "image_url": "https://images.unsplash.com/photo-1518838439236-2b73ceb4638a"},
+    ]
+    
+    await db.categories.insert_many(categories)
+    
+    print("Creating products with INR pricing...")
+    
+    # Create products (prices in INR)
+    products = [
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Premium Wireless Headphones",
+            "description": "Experience crystal-clear audio with our premium wireless headphones featuring active noise cancellation and 30-hour battery life.",
+            "price": 24999,
+            "original_price": 33999,
+            "discount": 26,
+            "category": "Headphones",
+            "brand": "AudioPro",
+            "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e",
+            "images": ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e"],
+            "stock": 50,
+            "rating": 4.8,
+            "reviews_count": 124,
+            "seller_id": seller_id,
+            "specifications": {"Battery Life": "30 hours", "Noise Cancellation": "Active", "Connectivity": "Bluetooth 5.0"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Professional DSLR Camera",
+            "description": "Capture stunning photos with our professional DSLR camera featuring 24MP sensor and 4K video recording.",
+            "price": 109999,
+            "original_price": 134999,
+            "discount": 19,
+            "category": "Cameras",
+            "brand": "PhotoMaster",
+            "image_url": "https://images.unsplash.com/photo-1510872893374-80379d91fc92",
+            "images": ["https://images.unsplash.com/photo-1510872893374-80379d91fc92"],
+            "stock": 25,
+            "rating": 4.9,
+            "reviews_count": 89,
+            "seller_id": seller_id,
+            "specifications": {"Sensor": "24MP", "Video": "4K", "ISO Range": "100-25600"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Ultra Slim Laptop - Intel i7",
+            "description": "Powerful performance in a sleek design. Features Intel i7 11th Gen processor, 16GB RAM, and 512GB SSD. Perfect for students and professionals.",
+            "price": 89999,
+            "original_price": 109999,
+            "discount": 18,
+            "category": "Laptops",
+            "brand": "TechBook",
+            "image_url": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853",
+            "images": ["https://images.unsplash.com/photo-1496181133206-80ce9b88a853"],
+            "stock": 30,
+            "rating": 4.7,
+            "reviews_count": 156,
+            "seller_id": seller_id,
+            "specifications": {"Processor": "Intel i7 11th Gen", "RAM": "16GB", "Storage": "512GB SSD", "Display": "14 inch FHD"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Gaming Laptop - RTX 4060",
+            "description": "High-performance gaming laptop with NVIDIA RTX 4060, Intel i7 13th Gen, 16GB DDR5 RAM, and 144Hz display.",
+            "price": 124999,
+            "original_price": 149999,
+            "discount": 17,
+            "category": "Laptops",
+            "brand": "GamePro",
+            "image_url": "https://images.unsplash.com/photo-1603302576837-37561b2e2302",
+            "images": ["https://images.unsplash.com/photo-1603302576837-37561b2e2302"],
+            "stock": 20,
+            "rating": 4.8,
+            "reviews_count": 92,
+            "seller_id": seller_id,
+            "specifications": {"Processor": "Intel i7 13th Gen", "GPU": "RTX 4060", "RAM": "16GB DDR5", "Display": "15.6 inch 144Hz"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Smart Watch Pro",
+            "description": "Stay connected with our advanced smartwatch featuring health tracking, GPS, and water resistance.",
+            "price": 28999,
+            "original_price": 37999,
+            "discount": 24,
+            "category": "Smart Watches",
+            "brand": "WearTech",
+            "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30",
+            "images": ["https://images.unsplash.com/photo-1523275335684-37898b6baf30"],
+            "stock": 60,
+            "rating": 4.6,
+            "reviews_count": 203,
+            "seller_id": seller_id,
+            "specifications": {"Display": "AMOLED", "Battery": "5 days", "Water Resistance": "50m"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Wireless Earbuds Pro",
+            "description": "Premium sound quality with active noise cancellation and wireless charging case.",
+            "price": 14999,
+            "original_price": 19999,
+            "discount": 25,
+            "category": "Earbuds",
+            "brand": "SoundWave",
+            "image_url": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df",
+            "images": ["https://images.unsplash.com/photo-1590658268037-6bf12165a8df"],
+            "stock": 100,
+            "rating": 4.5,
+            "reviews_count": 312,
+            "seller_id": seller_id,
+            "specifications": {"Battery Life": "24 hours", "Noise Cancellation": "Active", "Charging": "Wireless"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "4K Ultra HD Monitor - 27 inch",
+            "description": "27-inch 4K monitor with HDR support and ultra-slim bezels for immersive viewing. Great for coding and content creation.",
+            "price": 37999,
+            "original_price": 49999,
+            "discount": 24,
+            "category": "Monitors",
+            "brand": "ViewPro",
+            "image_url": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf",
+            "images": ["https://images.unsplash.com/photo-1527443224154-c4a3942d3acf"],
+            "stock": 40,
+            "rating": 4.8,
+            "reviews_count": 87,
+            "seller_id": seller_id,
+            "specifications": {"Resolution": "4K UHD", "Size": "27 inch", "HDR": "Yes", "Refresh Rate": "60Hz"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Flagship 5G Smartphone",
+            "description": "Latest flagship smartphone with 5G connectivity, 108MP camera, and all-day battery life.",
+            "price": 74999,
+            "original_price": 89999,
+            "discount": 17,
+            "category": "Mobile Phones",
+            "brand": "PhoneTech",
+            "image_url": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
+            "images": ["https://images.unsplash.com/photo-1511707171634-5f897ff02aa9"],
+            "stock": 75,
+            "rating": 4.7,
+            "reviews_count": 245,
+            "seller_id": seller_id,
+            "specifications": {"Camera": "108MP", "Connectivity": "5G", "Battery": "5000mAh", "Display": "6.7 inch AMOLED"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Budget 5G Smartphone",
+            "description": "Affordable 5G smartphone with 50MP camera, 6GB RAM, and fast charging support.",
+            "price": 19999,
+            "original_price": 24999,
+            "discount": 20,
+            "category": "Mobile Phones",
+            "brand": "ValuePhone",
+            "image_url": "https://images.unsplash.com/photo-1598327105666-5b89351aff97",
+            "images": ["https://images.unsplash.com/photo-1598327105666-5b89351aff97"],
+            "stock": 90,
+            "rating": 4.4,
+            "reviews_count": 178,
+            "seller_id": seller_id,
+            "specifications": {"Camera": "50MP", "RAM": "6GB", "Battery": "5000mAh", "Charging": "33W Fast"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Mechanical Gaming Keyboard RGB",
+            "description": "Premium mechanical gaming keyboard with RGB backlighting and customizable keys.",
+            "price": 8999,
+            "original_price": 12999,
+            "discount": 31,
+            "category": "Gaming Accessories",
+            "brand": "KeyMaster",
+            "image_url": "https://images.unsplash.com/photo-1587829741301-dc798b83add3",
+            "images": ["https://images.unsplash.com/photo-1587829741301-dc798b83add3"],
+            "stock": 65,
+            "rating": 4.6,
+            "reviews_count": 143,
+            "seller_id": seller_id,
+            "specifications": {"Switch Type": "Mechanical Blue", "Backlighting": "RGB", "Connectivity": "USB-C"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Wireless Gaming Mouse",
+            "description": "High-precision wireless gaming mouse with 16000 DPI and programmable buttons.",
+            "price": 4999,
+            "original_price": 6999,
+            "discount": 29,
+            "category": "Gaming Accessories",
+            "brand": "ClickPro",
+            "image_url": "https://images.unsplash.com/photo-1527814050087-3793815479db",
+            "images": ["https://images.unsplash.com/photo-1527814050087-3793815479db"],
+            "stock": 80,
+            "rating": 4.7,
+            "reviews_count": 201,
+            "seller_id": seller_id,
+            "specifications": {"DPI": "16000", "Battery Life": "80 hours", "Programmable Buttons": "8"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Portable SSD 1TB",
+            "description": "Ultra-fast portable SSD with USB 3.2 Gen 2 connectivity. Perfect for students and professionals.",
+            "price": 7999,
+            "original_price": 9999,
+            "discount": 20,
+            "category": "Storage",
+            "brand": "DataSpeed",
+            "image_url": "https://images.unsplash.com/photo-1531492746076-161ca9bcad58",
+            "images": ["https://images.unsplash.com/photo-1531492746076-161ca9bcad58"],
+            "stock": 55,
+            "rating": 4.8,
+            "reviews_count": 167,
+            "seller_id": seller_id,
+            "specifications": {"Capacity": "1TB", "Speed": "1050 MB/s", "Connectivity": "USB 3.2 Gen 2"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Tablet 11 inch - WiFi + 4G",
+            "description": "Powerful tablet with 11-inch display, 8GB RAM, and stylus support. Great for students and note-taking.",
+            "price": 34999,
+            "original_price": 44999,
+            "discount": 22,
+            "category": "Tablets",
+            "brand": "TabletPro",
+            "image_url": "https://images.unsplash.com/photo-1561154464-82e9adf32764",
+            "images": ["https://images.unsplash.com/photo-1561154464-82e9adf32764"],
+            "stock": 45,
+            "rating": 4.6,
+            "reviews_count": 134,
+            "seller_id": seller_id,
+            "specifications": {"Display": "11 inch 2K", "RAM": "8GB", "Storage": "128GB", "Stylus": "Included"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "USB-C Hub 7-in-1",
+            "description": "Multi-port USB-C hub with HDMI, USB 3.0, SD card reader, and more. Essential for laptops.",
+            "price": 1999,
+            "original_price": 2999,
+            "discount": 33,
+            "category": "Accessories",
+            "brand": "HubTech",
+            "image_url": "https://images.unsplash.com/photo-1625948515291-69613efd103f",
+            "images": ["https://images.unsplash.com/photo-1625948515291-69613efd103f"],
+            "stock": 120,
+            "rating": 4.5,
+            "reviews_count": 289,
+            "seller_id": seller_id,
+            "specifications": {"Ports": "7-in-1", "HDMI": "4K@60Hz", "USB": "3.0 x3"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Designer Leather Jacket",
+            "description": "Premium genuine leather jacket with modern design and comfortable fit.",
+            "price": 20999,
+            "original_price": 29999,
+            "discount": 30,
+            "category": "Fashion",
+            "brand": "StyleCo",
+            "image_url": "https://images.unsplash.com/photo-1518838439236-2b73ceb4638a",
+            "images": ["https://images.unsplash.com/photo-1518838439236-2b73ceb4638a"],
+            "stock": 35,
+            "rating": 4.6,
+            "reviews_count": 67,
+            "seller_id": seller_id,
+            "specifications": {"Material": "Genuine Leather", "Sizes": "S, M, L, XL", "Care": "Dry Clean"},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    ]
+    
+    await db.products.insert_many(products)
+    
+    print(f"✅ Database seeded successfully with {len(products)} products!")
+    print(f"\nTest Accounts:")
+    print(f"Admin: admin@shopnexia.com / admin123")
+    print(f"Seller: seller@shopnexia.com / seller123")
+    print(f"Customer: customer@shopnexia.com / customer123")
+    print(f"\nAll prices are now in INR (₹)")
+    
+    client.close()
+
+if __name__ == "__main__":
+    asyncio.run(seed_database())
